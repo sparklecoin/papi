@@ -99,9 +99,11 @@ def total(deck_id):
 def alert():
     txid = request.values.get('txid')
     if txid is not None:
-        deck = which_deck(txid)['deck_id']
-        if deck in subscribed:
-            update_state(deck)
+        owner = which_deck(txid)
+        if owner is not None:
+            deck = owner['deck_id']
+            if deck in subscribed or subscribed == ['*']:
+                update_state(deck)
 
     return jsonify({'walletnotify': bool(txid)})
 

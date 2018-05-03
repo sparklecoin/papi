@@ -102,6 +102,8 @@ def init_decks():
             except StopIteration:
                 break
 
+    print("");
+
 def update_decks(txid):
     deck = pa.find_deck(node, txid, version)
     add_deck(deck)
@@ -109,15 +111,22 @@ def update_decks(txid):
 
 def which_deck(txid):
     deck = node.gettransaction(txid)
-    deck_id = [details['account'] for details in deck['details'] if details['account']][0]
-    if deck_id:
+    deck_id = None
+
+    if 'details' in deck.keys():
+         owneraccounts = [details['account'] for details in deck['details'] if details['account']]
+         if len(owneraccounts):
+             deck_id = [details['account'] for details in deck['details'] if details['account']][0]
+
+    if deck_id is not None:
         if deck_id in ('PAPROD','PATEST'):
             update_decks(txid)
-        elif deck_id in subscribed:
+        elif deck_id in subscribed or subscribed == ['*']:
             deck = pa.find_deck(node, deck_id, version)
             add_cards( pa.find_card_transfers(node, deck) )
-            DeckState(deck_id)
-        return {'deck_id':txid}
+            init_state(deck.id)
+            #DeckState(deck_id)
+        return {'deck_id':deck_id}
     else:
         return
 
