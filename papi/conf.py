@@ -15,11 +15,11 @@ version = environ.get('PA_VERSION', 1)
 # ip address of the peercoin node
 rpc_host = environ.get('RPC_HOST', 'localhost')
 # port of the peercoin node
-rpc_port = environ.get('RCP_PORT', '9904')
+rpc_port = environ.get('RCP_PORT', '16021')
 # username for rpc connection
-rpc_username = environ.get('RPC_USERNAME', None)
+rpc_username = environ.get('RPC_USERNAME', 'randomuser')
 # password for the rpc_connection
-rpc_password = environ.get('RPC_PASSWORD', None)
+rpc_password = environ.get('RPC_PASSWORD', '098ooius00asiIIS00JAJ')
 # subscribed deck list
 # Use '*' inside the list to subscribe to all decks or use deck id's to subscribe to specified decks only
 subscribed = ['*']
