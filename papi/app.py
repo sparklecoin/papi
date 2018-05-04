@@ -115,7 +115,13 @@ def alert():
         owner = which_deck(txid)
         if owner is not None:
             deck = owner['deck_id']
-            if deck in subscribed or subscribed == ['*']:
+            print("deck",deck)
+            if deck in ['PAPROD', 'PATEST']:
+                # new deck found
+                load_key(txid)
+                update_decks(txid)
+            elif deck in subscribed or subscribed == ['*']:
+                # existing deck
                 update_state(deck)
 
     return jsonify({'walletnotify': bool(txid)})
