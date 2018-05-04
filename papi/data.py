@@ -69,6 +69,7 @@ def init_decks():
         for deck in decks:
             if deck is not None:
                 if deck.id not in accounts:
+                    print("deck",deck,"not in account",accounts)
                     load_key(deck.id)
                 add_deck(deck)
                 try:
@@ -85,9 +86,10 @@ def init_decks():
         while True:
             try: 
                 deck = next( decks )
-                add_deck( deck )
                 if deck.id not in accounts:
+                    print("deck",deck,"not in account",accounts)
                     load_key(deck.id)
+                add_deck( deck )
                 if not checkpoint(deck.id):
                     try:
                         if '*' in subscribed:
@@ -126,7 +128,7 @@ def which_deck(txid):
             if not checkpoint(deck_id):
                 add_cards( pa.find_card_transfers(node, deck) )
                 init_state(deck.id)
-                #DeckState(deck_id)
+                DeckState(deck_id)
         return {'deck_id':deck_id}
     else:
         return
