@@ -1,7 +1,7 @@
-FROM python:3-alpine3.7
+FROM tiangolo/uwsgi-nginx-flask:python3.6-alpine3.7
 
 ENV USERNAME=papi \
-    APP_DIRECTORY=/usr/src/app
+    APP_DIRECTORY=/app
 
 RUN addgroup -S ${USERNAME} \
     && adduser -D -H -S -s /bin/false -u 1000 -G ${USERNAME} ${USERNAME} \
@@ -25,6 +25,8 @@ ENV APP_ENV=docker
 
 VOLUME /var/lib/papi/
 
+ENV LISTEN_PORT 5555
+
 EXPOSE 5555
 
-ENTRYPOINT [ "python3", "app.py"]
+ENTRYPOINT ["python3", "main.py"]

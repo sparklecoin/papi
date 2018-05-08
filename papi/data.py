@@ -44,15 +44,15 @@ def add_cards(cards):
         for cardset in cards:
             for card in cardset:
                 card_id = card.txid + str(card.blockseq) + str(card.cardseq)
-                entry = db.session.query(Card).filter(Card.id == card_id).first()   
+                entry = db.session.query(Card).filter(Card.txid == card.txid).filter(Card.blockseq == card.blockseq).filter(Card.cardseq == card.cardseq).first()   
                 if not entry:
-                    C = Card( card_id, card.blockhash, card.cardseq, card.receiver[0], card.sender, card.amount[0], card.type, card.blocknum, card.blockseq, card.deck_id, False )
+                    C = Card( card.txid, card.blockhash, card.cardseq, card.receiver[0], card.sender, card.amount[0], card.type, card.blocknum, card.blockseq, card.deck_id, False )
                     db.session.add(C)
                 db.session.commit()
 
 def load_key(deck_id):
     from binascii import unhexlify
-    wif = pa.Kutil(privkey=unhexlify(deck_id), network=node.network).wif
+    wif = pa.Kutil(privkey=pa.kutil.PrivateKey(unhexlify(deck_id)), network=node.network).wif
     node.importprivkey(wif,deck_id)
 
 def init_decks():
@@ -139,17 +139,25 @@ def update_state(deck_id):
         return
 
 def checkpoint(deck_id):
-    checkpoint = node.listtransactions(deck_id)
+    checkpoint = node.listtransactions(deck_id)[::-1]
+    _checkpoint = db.session.query(Card).filter(Card.deck_id == deck_id).order_by(Card.blocknum.desc()).first()
 
     if checkpoint:
-        checkpoint = checkpoint[::-1][0]['blockhash']
-        _checkpoint = db.session.query(Card).filter(Card.deck_id == deck_id).order_by(Card.blocknum).first()
+        for i in range(len(checkpoint)):
+            if checkpoint[i]['blockhash'] == _checkpoint:
+                return True
 
-        if _checkpoint is not None:
-            return True
-        else:
+            tx = checkpoint[i]['txid']
+            rawtx = node.getrawtransaction(tx,1)
+            deck = pa.find_deck(node, deck_id, version)
+            try:
+                pa.validate_card_transfer_p2th(deck, rawtx)
+                return _checkpoint.blockhash == checkpoint[i]['blockhash']
+            except Exception:
+                continue
+
             return False
-            
+
     return False
 
 def init_pa():
