@@ -43,7 +43,6 @@ def add_cards(cards):
     if cards is not None:
         for cardset in cards:
             for card in cardset:
-                card_id = card.txid + str(card.blockseq) + str(card.cardseq)
                 entry = db.session.query(Card).filter(Card.txid == card.txid).filter(Card.blockseq == card.blockseq).filter(Card.cardseq == card.cardseq).first()   
                 if not entry:
                     C = Card( card.txid, card.blockhash, card.cardseq, card.receiver[0], card.sender, card.amount[0], card.type, card.blocknum, card.blockseq, card.deck_id, False )
