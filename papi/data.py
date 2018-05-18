@@ -73,7 +73,7 @@ def init_decks():
                 if deck.id not in accounts:
                     print("deck",deck,"not in account",accounts)
                     load_key(deck.id)
-                    add_deck(deck)
+                add_deck(deck)
                 try:
                     if not checkpoint(deck.id):
                         add_cards( pa.find_card_transfers(node, deck) )
