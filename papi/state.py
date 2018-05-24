@@ -15,29 +15,33 @@ class DeckState:
 
     @property
     def balances(self):
+        ''' Get all balances that correspond with the current deck '''
         return db.session.query(Balance).filter(Balance.short_id == self.short_id)
 
     def counter(self):
-
+        ''' Get the block number that the balances for this account were last updated'''  
         Blocknum = self.balances.filter(Balance.account == 'blocknum')
 
         if Blocknum.first() is None:
+            ''' If this deck does not have a 'blocknum' account in database then create one '''
             B = Balance( 'blocknum', 0, self.short_id, '' )
             db.session.add(B)
             db.session.commit()
             Blocknum = self.balances.filter(Balance.account == 'blocknum')
+
         if Blocknum.first() is not None:
+            ''' Only concerned with cards that are before the last update to balances of this deck '''
             self.cards = self.cards.filter(Card.blocknum > Blocknum.first().value)
 
     def process_issue(self, card):
         c_short_id = card.txid[0:10]
-
+    
         def ONCE( amount: int = card.amount ):
             ''' Set Issuer object to a query of all accounts containing the deck issuing address '''
             Issuer = self.balances.filter( Balance.account.contains( self.deck.issuer ) )
 
             if Issuer.first() is not None:
-                ''' If there exists an entry containing the deck issuing address '''
+                ''' There is already an entry containing the deck issuing address '''
 
                 if self.mode == 'ONCE':
                     ''' If issue mode of the deck is ONCE then only first occurence
@@ -58,9 +62,8 @@ class DeckState:
                 else:
                     ''' Continue processing issuance since it does not contain ONCE issue mode'''
 
-                    process_sender(amount, card, tag=True)
-                    # Tag set to True ensures that the CardIssue transactions are grouped by c_short_id
-                    process_receiver(amount, card)
+                    process_sender( amount, card )
+                    process_receiver( amount, card )
                     _card = db.session.query(Card).filter(Card.txid == card.txid).filter(Card.blockseq == card.blockseq).filter(Card.cardseq == card.cardseq).first()
                     _card.valid = True
                     db.session.commit()
@@ -99,7 +102,7 @@ class DeckState:
             Receiver = self.balances.filter( Balance.account == card.receiver )
 
             if Receiver.first() is not None:
-                Receiver.update( {"value" : Receiver.first().value  + amount, "checkpoint": blockhash}, synchronize_session='fetch' )
+                Receiver.update( {"value" : Receiver.first().value  + amount, "checkpoint": card.blockhash}, synchronize_session='fetch' )
             
             if Receiver.first() is None:
                 B = Balance( card.receiver , amount, self.short_id, card.blockhash)
@@ -116,7 +119,7 @@ class DeckState:
                 if Issuer.filter( Balance.account.contains( card.sender ) ).first() is not None:
                     process_sender( amount, card )
                 else:
-                    process_sender( amount, card, tag=True )
+                    process_sender( amount, card )
 
                 process_receiver( amount, card )
                 _card = db.session.query(Card).filter(Card.txid == card.txid).filter(Card.blockseq == card.blockseq).filter(Card.cardseq == card.cardseq).first()

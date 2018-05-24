@@ -1,22 +1,20 @@
 import pypeerassets as pa
+from sync import Sync, attempt_connection
 from models import Deck, Card, Balance, db
 from state import DeckState, init_state
 from sqlalchemy.exc import IntegrityError
 from conf import *
 import sys
 
-try:
-    node = pa.RpcNode(testnet=testnet, username=rpc_username, password=rpc_password,
-                      ip=rpc_host, port=rpc_port)
-except FileNotFoundError:
-    print('Error: Please provide with RPC parameteres.')
-
+''' Connection attempts counter'''
+connection = attempt_connection( Sync() )
+node = connection.node
 
 def init_p2thkeys():
-    n = 0
 
     if autoload:
-        pa.pautils.load_p2th_privkey_into_local_node(node,production)
+        pa.pautils.load_p2th_privkey_into_local_node(node, production)
+
 
 def add_deck(deck):
     if deck is not None:
@@ -25,7 +23,6 @@ def add_deck(deck):
             subscribe = True
         else:
             subscribe = deck.id in subscribed
-        
 
         if not entry:
             try:
@@ -39,21 +36,26 @@ def add_deck(deck):
             db.session.query(Deck).filter(Deck.id == deck.id).update({"subscribed": subscribe})
             db.session.commit()
 
+
 def add_cards(cards):
     if cards is not None:
         for cardset in cards:
             for card in cardset:
-                card_id = card.txid + str(card.blockseq) + str(card.cardseq)
-                entry = db.session.query(Card).filter(Card.txid == card.txid).filter(Card.blockseq == card.blockseq).filter(Card.cardseq == card.cardseq).first()   
+                entry = db.session.query(Card).filter(Card.txid == card.txid).filter(Card.blockseq == card.blockseq).filter(Card.cardseq == card.cardseq).first()
                 if not entry:
                     C = Card( card.txid, card.blockhash, card.cardseq, card.receiver[0], card.sender, card.amount[0], card.type, card.blocknum, card.blockseq, card.deck_id, False )
                     db.session.add(C)
                 db.session.commit()
 
+
 def load_key(deck_id):
     from binascii import unhexlify
-    wif = pa.Kutil(privkey=pa.kutil.PrivateKey(unhexlify(deck_id)), network=node.network).wif
-    node.importprivkey(wif,deck_id)
+    try:
+        wif = pa.Kutil(privkey=unhexlify(deck_id), network=node.network).wif
+        node.importprivkey( wif, deck_id)
+    except Exception as e:
+        print(e)
+
 
 def init_decks():
     accounts = node.listaccounts()
@@ -61,7 +63,7 @@ def init_decks():
 
     def message(n):
         sys.stdout.flush()
-        sys.stdout.write('{} Decks Loaded\r'.format(n))
+        sys.stdout.write('\r{} Decks Loaded\r'.format(n))
 
     if not autoload:
         decks = [pa.find_deck(node,txid,version) for txid in subscribed]
@@ -82,7 +84,7 @@ def init_decks():
                 message(n)
 
     else:
-        decks = pa.find_all_valid_decks(node, 1, True)
+        decks = pa.find_all_valid_decks(node, version, production)
         while True:
             try: 
                 deck = next( decks )
@@ -104,12 +106,12 @@ def init_decks():
             except StopIteration:
                 break
 
-    print("");
 
 def update_decks(txid):
     deck = pa.find_deck(node, txid, version)
     add_deck(deck)
     return
+
 
 def which_deck(txid):
     deck = node.gettransaction(txid)
@@ -133,32 +135,57 @@ def which_deck(txid):
     else:
         return
 
+
 def update_state(deck_id):
     if not checkpoint(deck_id):
         DeckState(deck_id)
         return
 
+
 def checkpoint(deck_id):
-    checkpoint = node.listtransactions(deck_id)[::-1]
-    _checkpoint = db.session.query(Card).filter(Card.deck_id == deck_id).order_by(Card.blocknum.desc()).first()
+    ''' List all accounts and check if deck_id is loaded into the node'''
+    accounts = node.listaccounts()
 
-    if checkpoint:
-        for i in range(len(checkpoint)):
-            if checkpoint[i]['blockhash'] == _checkpoint:
-                return True
+    if deck_id not in accounts:
+        ''' if deck_id is not in accounts, load the key into the local node'''
+        load_key(deck_id)
 
-            tx = checkpoint[i]['txid']
-            rawtx = node.getrawtransaction(tx,1)
-            deck = pa.find_deck(node, deck_id, version)
-            try:
-                pa.validate_card_transfer_p2th(deck, rawtx)
-                return _checkpoint.blockhash == checkpoint[i]['blockhash']
-            except Exception:
-                continue
+    ''' list all transactions for a particular deck '''
+    txs = node.listtransactions(deck_id)
+
+    if isinstance(txs,list):
+        ''' Make sure txs is a list rather than a dict with an error. Reverse list order.'''
+        checkpoint = txs[::-1]
+        ''' Get the most recent card transaction recorded in the database for the given deck '''
+        _checkpoint = db.session.query(Card).filter(Card.deck_id == deck_id).order_by(Card.blocknum.desc()).first()
+
+        if _checkpoint is not None:
+            ''' If database query doesn't return None type then checkpoint exists'''
+            for i, v in enumerate(checkpoint):
+                ''' for each transaction in local node listtransactions '''
+
+                if ('blockhash','txid') in v:
+                    ''' Check that keys exists within dict ''' 
+                    if v['blockhash'] == _checkpoint.blockhash:
+                        return True
+
+                    txid = v['txid']
+                    rawtx = node.getrawtransaction(txid,1)
+
+                    ''' get deck object of current deck_id '''
+                    deck = pa.find_deck(node, deck_id, version)
+                    try:
+                        ''' check if it's a valid PeerAssets transaction '''
+                        pa.validate_card_transfer_p2th(deck, rawtx)
+                        ''' return False if checkpoints don't match and True if they do '''
+                        return _checkpoint.blockhash == v['blockhash']
+                    except Exception:
+                        continue
 
             return False
 
     return False
+
 
 def init_pa():
     init_p2thkeys()
