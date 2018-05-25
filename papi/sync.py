@@ -33,7 +33,7 @@ class Sync:
                 self.peers = self.node.getpeerinfo()
                 ''' Appending connected peers current blockheights'''
                 try:
-                    self.recent = max([i['startingheight'] for i in self.peers])
+                    self.recent = max([i['height'] for i in self.peers])
                 except ValueError:
                     return False
 
