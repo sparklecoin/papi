@@ -17,6 +17,7 @@ def init_p2thkeys():
 
 
 def add_deck(deck):
+    from binascii import hexlify
     if deck is not None:
         entry = db.session.query(Deck).filter(Deck.id == deck.id).first()
         if '*' in subscribed:
@@ -26,7 +27,8 @@ def add_deck(deck):
 
         if not entry:
             try:
-                D = Deck( deck.id, deck.name, deck.issuer, deck.issue_mode, deck.number_of_decimals, subscribe)
+                data = hexlify(deck.asset_specific_data).decode()
+                D = Deck( deck.id, deck.name, deck.issuer, deck.issue_mode, deck.number_of_decimals, subscribe, data)
                 db.session.add(D)
                 db.session.commit()
             except Exception as e:
