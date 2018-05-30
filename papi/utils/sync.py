@@ -20,7 +20,7 @@ class Sync:
 
     def get_recent(self):
         self.peers = self.node.getpeerinfo()
-        recent = [i['startingheight'] for i in self.peers]
+        recent = [i['height'] for i in self.peers]
         return recent
 
     @property
