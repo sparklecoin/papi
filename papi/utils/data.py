@@ -1,14 +1,11 @@
 import pypeerassets as pa
-from sync import Sync, attempt_connection
+from binascii import hexlify
 from models import Deck, Card, Balance, db
-from state import DeckState, init_state
+from .sync import node
+from .state import DeckState, init_state
 from sqlalchemy.exc import IntegrityError
 from conf import *
 import sys
-
-''' Connection attempts counter'''
-connection = attempt_connection( Sync() )
-node = connection.node
 
 def init_p2thkeys():
 
@@ -45,7 +42,9 @@ def add_cards(cards):
             for card in cardset:
                 entry = db.session.query(Card).filter(Card.txid == card.txid).filter(Card.blockseq == card.blockseq).filter(Card.cardseq == card.cardseq).first()
                 if not entry:
-                    C = Card( card.txid, card.blockhash, card.cardseq, card.receiver[0], card.sender, card.amount[0], card.type, card.blocknum, card.blockseq, card.deck_id, False )
+                    data = hexlify(card.asset_specific_data).decode()
+                    C = Card( card.txid, card.blockhash, card.cardseq, card.receiver[0], card.sender, 
+                    card.amount[0], card.type, card.blocknum, card.blockseq, card.deck_id, False, data )
                     db.session.add(C)
                 db.session.commit()
 
@@ -188,10 +187,8 @@ def checkpoint(deck_id):
 
     return False
 
-
 def init_pa():
     init_p2thkeys()
     init_decks()
-
     sys.stdout.write('PeerAssets version {} Initialized'.format(version))
     sys.stdout.flush()
