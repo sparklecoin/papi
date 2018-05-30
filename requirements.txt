@@ -8,4 +8,4 @@ Redis==2.10.6
 
 peercoin_rpc
 -e git://github.com/sparklecoin/pypeerassets@master#egg=pypeerassets
--e git://github.com/PeerAssets/btcpy@master#egg=btcpy
+-e git://github.com/sparklecoin/btcpy@master#egg=btcpy
