@@ -115,6 +115,7 @@ def alert():
                 # new deck found
                 load_key(txid)
                 update_decks(txid)
+                update_state(txid)
             elif deck in subscribed or subscribed == ['*']:
                 # existing deck
                 update_state(deck)

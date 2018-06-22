@@ -143,6 +143,14 @@ class DeckState:
             ''' MONO '''
             MULTI(amount=1)
 
+        elif self.mode == IssueMode(0).name:
+            ''' CUSTOM '''
+            MULTI(amount=1)
+
+        elif self.mode == IssueMode(16).name:
+            ''' UNFLUSHABLE '''
+            MULTI(amount=1)
+
         db.session.commit()
         return
 
