@@ -12,9 +12,10 @@ class Deck(db.Model):
     decimals = db.Column(db.Integer)
     subscribed = db.Column(db.Boolean)
     asset_specific_data = db.Column(db.String)
+    blocknum = db.Column(db.Integer)
     
     #----------------------------------------------------------------------
-    def __init__(self, id, name, issuer, issue_mode, decimals, subscribed, asset_specific_data):
+    def __init__(self, id, name, issuer, issue_mode, decimals, subscribed, asset_specific_data, blocknum):
         """"""
         self.id = id
         self.name = name
@@ -23,6 +24,7 @@ class Deck(db.Model):
         self.decimals = decimals
         self.subscribed = subscribed
         self.asset_specific_data = asset_specific_data
+        self.blocknum = blocknum
 
 class Card(db.Model):
     """"""
