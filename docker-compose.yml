@@ -1,0 +1,58 @@
+version: '3.5'
+services:
+  sparklecoind:
+    build: ./sparklecoind
+    restart: always
+    ports:
+      - "19904:19904"
+    environment:
+      - SPRK_RPC_USER=papi
+      - SPRK_RPC_PASSWORD=papipass
+    volumes:
+      - type: bind
+        source: /opt/papi
+        target: /home/coin/.sparklecoin
+    command:
+      -testnet
+      -nominting
+      -rpcallowip=*
+      -rpcport=19904
+      -walletnotify='/usr/local/bin/transaction.sh %s'
+  postgres:
+    image: sameersbn/postgresql:9.6-2
+    environment:
+      - DB_USER=docker
+      - DB_PASS=papipass
+      - DB_NAME=papi
+      - DB_TEMPLATE=
+
+      - DB_EXTENSION=
+
+      - REPLICATION_MODE=
+      - REPLICATION_USER=
+      - REPLICATION_PASS=
+      - REPLICATION_SSLMODE=
+    ports:
+      - "5432"
+    volumes:
+      - /opt/papi/db:/var/lib/postgresql
+    restart: always
+  papi:
+    restart: always
+    build: .
+    ports:
+      - "5555:5555"
+    depends_on:
+      - sparklecoind
+      - postgres
+    environment:
+      - PYTHONPATH=/app/src/btcpy:/app/src/pypeerassets
+      - PA_TESTNET=true
+      - PA_PRODUCTION=true
+      - AUTOLOAD=true
+      - PA_VERSION=1
+      - RPC_HOST=sparklecoind
+      - RPC_PORT=19904
+      - RPC_USERNAME=papi
+      - RPC_PASSWORD=papipass
+      - DB=postgresql://docker:papipass@postgres:5432/papi
